@@ -85,7 +85,7 @@ requirejs(['./WorldWindShim',
                         var line1 = '';
                         var line2 = '';
                         var time = new Date();
-                        for(var i=0;i<lines3le.length&&i<3000;i++){
+                        for(var i=0;i<lines3le.length;i++){
                             if(i%3==0){
                                 trashName = lines3le[i];
                             } else if(i%3==1)
@@ -101,10 +101,10 @@ requirejs(['./WorldWindShim',
 
                                     // Create a Collada loader and direct it to the desired directory and .dae file.
                                     var trashLoader = new WorldWind.ColladaLoader(position);
-                                    trashLoader.init({dirPath: './collada_models/duck/'});
+                                    trashLoader.init({dirPath: './collada_models/'});
 
-                                    trashLoader.load('duck.dae', function (scene) {
-                                        scene.scale = 500;
+                                    trashLoader.load('cube4.dae', function (scene) {
+                                        scene.scale = 25000;
                                         spacetrashLayer.addRenderable(scene); // Add the Collada model to the renderable layer within a callback.
                                         trashScene = scene;
                                     });
@@ -156,10 +156,10 @@ requirejs(['./WorldWindShim',
 
         // Create a Collada loader and direct it to the desired directory and .dae file.
         var colladaLoader = new WorldWind.ColladaLoader(position);
-        colladaLoader.init({dirPath: './collada_models/duck/'});
+        colladaLoader.init({dirPath: './collada_models/'});
 
-        colladaLoader.load('duck.dae', function (scene) {
-            scene.scale = 500;
+        colladaLoader.load('cube4.dae', function (scene) {
+            scene.scale = 25000;
             spacetrashLayer.addRenderable(scene); // Add the Collada model to the renderable layer within a callback.
             trashScene = scene;
         });
