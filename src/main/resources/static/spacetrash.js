@@ -29,6 +29,9 @@
  * Illustrates how to load and display a Collada 3D model onto the globe. Also shows how to calculate
  * intersection points when you click on the model.
  */
+var trashData = '';
+var trashScene = null;
+var spacetrashLayer = null;
 
 requirejs(['./WorldWindShim',
         './LayerManager'],
@@ -37,6 +40,83 @@ requirejs(['./WorldWindShim',
 
         // Tell WorldWind to log only warnings and errors.
         WorldWind.Logger.setLoggingLevel(WorldWind.Logger.LEVEL_WARNING);
+
+        function getTrashPos(line1, line2, time){
+
+// Initialize a satellite record
+            var satrec = satellite.twoline2satrec(line1, line2);
+
+//  Or you can use a JavaScript Date
+            var positionAndVelocity = satellite.propagate(satrec, time);
+
+// The position_velocity result is a key-value pair of ECI coordinates.
+// These are the base results from which all other coordinates are derived.
+            var positionEci = positionAndVelocity.position,
+                velocityEci = positionAndVelocity.velocity;
+
+// You will need GMST for some of the coordinate transforms.
+// http://en.wikipedia.org/wiki/Sidereal_time#Definition
+//get
+            var gmst = satellite.gstimeFromDate(time);
+
+            var positionGd    = satellite.eciToGeodetic(positionEci, gmst);
+
+// Geodetic coords are accessed via `longitude`, `latitude`, `height`.
+
+            var position= {};
+            position.longitude = satellite.degreesLong(positionGd.longitude);
+            position.latitude  = satellite.degreesLat(positionGd.latitude);
+            position.height    = positionGd.height*1000;
+
+            return position;
+        }
+
+        function getTrash(){
+            var request = new XMLHttpRequest();
+            request.open('GET', './trash-data/space-track-full-3le.txt', true);
+            request.send(null);
+            request.onreadystatechange = function () {
+                if (request.readyState === 4 && request.status === 200) {
+                    var type = request.getResponseHeader('Content-Type');
+                    if (type.indexOf("text") !== 1) {
+                        trashData = request.responseText;
+                        var lines3le = trashData.match(/[^\r\n]+/g);
+                        var trashName = '';
+                        var line1 = '';
+                        var line2 = '';
+                        var time = new Date();
+                        for(var i=0;i<lines3le.length&&i<3000;i++){
+                            if(i%3==0){
+                                trashName = lines3le[i];
+                            } else if(i%3==1)
+                            {
+                                line1 = lines3le[i];
+                            }
+                            if(i%3==2){
+                                line2 = lines3le[i];
+                                if(line1!='' && line2!=''){
+
+                                    var trashPos = getTrashPos(line1, line2,  time);
+                                    var position = new WorldWind.Position( trashPos.latitude, trashPos.longitude, trashPos.height);
+
+                                    // Create a Collada loader and direct it to the desired directory and .dae file.
+                                    var trashLoader = new WorldWind.ColladaLoader(position);
+                                    trashLoader.init({dirPath: './collada_models/duck/'});
+
+                                    trashLoader.load('duck.dae', function (scene) {
+                                        scene.scale = 500;
+                                        spacetrashLayer.addRenderable(scene); // Add the Collada model to the renderable layer within a callback.
+                                        trashScene = scene;
+                                    });
+
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
 
         // Create the WorldWindow.
         var wwd = new WorldWind.WorldWindow("canvasOne");
@@ -66,23 +146,25 @@ requirejs(['./WorldWindShim',
         }
 
         // Create renderable layer to hold the Collada model.
-        var modelLayer = new WorldWind.RenderableLayer("spacetrash");
-        wwd.addLayer(modelLayer);
+        spacetrashLayer = new WorldWind.RenderableLayer("spacetrash");
+        wwd.addLayer(spacetrashLayer);
         var placemarkLayer = new WorldWind.RenderableLayer("Placemarks")
         wwd.addLayer(placemarkLayer);
 
         // Define a position for locating the model.
         var position = new WorldWind.Position( 44.439663, 26.096306, 1000e3);
+
         // Create a Collada loader and direct it to the desired directory and .dae file.
         var colladaLoader = new WorldWind.ColladaLoader(position);
         colladaLoader.init({dirPath: './collada_models/duck/'});
-        var duckScene = null;
 
         colladaLoader.load('duck.dae', function (scene) {
             scene.scale = 500;
-            modelLayer.addRenderable(scene); // Add the Collada model to the renderable layer within a callback.
-            duckScene = scene;
+            spacetrashLayer.addRenderable(scene); // Add the Collada model to the renderable layer within a callback.
+            trashScene = scene;
         });
+
+        getTrash();
 
         // The following is an example of 3D ray intersaction with a COLLADA model.
         // A ray will be generated extending from the camera "eye" point towards a point in the
@@ -105,7 +187,7 @@ requirejs(['./WorldWindShim',
 
         // Add click event to trigger the generation of the ray and the computation of its intersections with the COLLADA model.
         var handleClick = function (o) {
-            if (duckScene == null) {
+            if (trashScene == null) {
                 return;
             }
             placemarkLayer.removeAllRenderables();
@@ -117,7 +199,7 @@ requirejs(['./WorldWindShim',
             // Compute intersection points between the model and the ray extending from the camera "eye" point.
             // Note that this takes into account possible concavities in the model.
             var intersections = [];
-            if (duckScene.computePointIntersections(wwd.globe, clickRay, intersections)) {
+            if (trashScene.computePointIntersections(wwd.globe, clickRay, intersections)) {
                 for (var i = 0, len = intersections.length; i < len; i++) {
                     var placemark = new WorldWind.Placemark(intersections[i], true, null);
                     placemark.altitudeMode = WorldWind.ABSOLUTE;
