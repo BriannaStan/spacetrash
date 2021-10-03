@@ -1,2 +1,2 @@
 # spacetrash
-You can check our project [here!](https://spacetrash.hypetree.org.
+You can check our project to [https://spacetrash.hypertree.org](https://spacetrash.hypetree.org).
